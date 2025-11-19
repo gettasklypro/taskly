@@ -441,20 +441,22 @@ ${websiteContext ? '\nCRITICAL REMINDER: The analyzed website above is your REFE
 
 OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY');
+    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'content-type': 'application/json',
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',  // Using Pro for highest accuracy
+        model: 'claude-3-opus-20240229',
+        max_tokens: 4096,
+        temperature: 0.3,
+        system: systemPrompt,
         messages: [
-          { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,  // Lower temperature for more consistent, accurate outputs
-        response_format: { type: "json_object" }
+        ]
       }),
     });
 
