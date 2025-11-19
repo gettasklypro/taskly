@@ -14,7 +14,14 @@ serve(async (req) => {
 
   try {
     console.log('Edge function called');
-    console.log('Authorization header present:', !!req.headers.get('Authorization'));
+    // Log all request headers
+    const allHeaders = {};
+    for (const [key, value] of req.headers.entries()) {
+      allHeaders[key] = value;
+    }
+    console.log('Request headers:', allHeaders);
+    // Log raw Authorization header
+    console.log('Raw Authorization header:', req.headers.get('Authorization'));
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
@@ -46,18 +53,21 @@ serve(async (req) => {
       // Batch mode: userId provided in request body (called with service role)
       console.log('Using provided userId from batch:', userId);
       effectiveUserId = userId;
+    if (userId) {
+      // Batch mode: userId provided in request body (called with service role)
+      console.log('Using provided userId from batch:', userId);
+      effectiveUserId = userId;
     } else {
       // Normal mode: authenticate the user
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-      
+      console.log('getUser() result:', { user, authError });
       if (authError) {
-        console.error('Auth error:', authError.message);
-        return new Response(JSON.stringify({ error: 'Authentication failed: ' + authError.message }), {
+        console.error('Auth error:', authError);
+        return new Response(JSON.stringify({ error: 'Authentication failed', details: authError }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      
       if (!user) {
         console.error('No user found in session');
         return new Response(JSON.stringify({ error: 'No authenticated user found' }), {
@@ -65,11 +75,9 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      
       console.log('User authenticated:', user.id);
       effectiveUserId = user.id;
     }
-
     if (!prompt || !category) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
