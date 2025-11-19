@@ -442,6 +442,24 @@ ${websiteContext ? '\nCRITICAL REMINDER: The analyzed website above is your REFE
 OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
 
     const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY');
+    if (!CLAUDE_API_KEY) {
+      console.error('Claude API key not found in secrets');
+      return new Response(JSON.stringify({ error: 'Claude API key not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const aiPayload = {
+      model: 'claude-3-opus-20240229',
+      max_tokens: 4096,
+      temperature: 0.3,
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: userPrompt }
+      ]
+    };
+    console.log('Claude API payload:', JSON.stringify(aiPayload));
     const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -449,16 +467,17 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
         'content-type': 'application/json',
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify({
-        model: 'claude-3-opus-20240229',
-        max_tokens: 4096,
-        temperature: 0.3,
-        system: systemPrompt,
-        messages: [
-          { role: 'user', content: userPrompt }
-        ]
-      }),
+      body: JSON.stringify(aiPayload),
     });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('Claude API error:', aiResponse.status, errorText);
+      return new Response(JSON.stringify({ error: `Claude API error: ${aiResponse.status} - ${errorText}` }), {
+        status: aiResponse.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
