@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TASKLY - All-in-One Job Management, Invoicing & Scheduling Software for Service Teams</title>
+    <meta name="description" content="Streamline your service business with client management, invoicing, scheduling, and a powerful website builder - all in one platform">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@300;400;500;700&family=Lato:wght@300;400;700&family=Merriweather:wght@300;400;700&family=Open+Sans:wght@300;400;600;700&family=Montserrat:wght@300;400;600;700&family=Raleway:wght@300;400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TASKLY - All-in-One Job Management, Invoicing & Scheduling Software for Service Teams">
+    <meta property="og:description" content="Streamline your service business with client management, invoicing, scheduling, and a powerful website builder - all in one platform">
+    <meta property="og:image" content="/icon-512.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TASKLY - All-in-One Job Management, Invoicing & Scheduling Software for Service Teams">
+    <meta name="twitter:description" content="Streamline your service business with client management, invoicing, scheduling, and a powerful website builder - all in one platform">
+    <meta name="twitter:image" content="/icon-512.png" />
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    
+    <!-- PWA Setup -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Taskly" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/service-worker.js")
+            .then(registration => {
+              console.log("Service Worker registered successfully:", registration);
+            })
+            .catch(error => {
+              console.log("Service Worker registration failed:", error);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>

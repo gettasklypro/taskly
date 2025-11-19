@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 220 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
+
+    --primary: 220 70% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 220 80% 55%;
+
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 20% 20%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 260 65% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 220 70% 45%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 220 25% 12%;
+    --sidebar-foreground: 220 10% 95%;
+    --sidebar-primary: 260 65% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 18%;
+    --sidebar-accent-foreground: 220 10% 95%;
+    --sidebar-border: 220 25% 16%;
+    --sidebar-ring: 260 65% 55%;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(220 70% 45%), hsl(260 65% 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(220 70% 45%) 0%, hsl(260 65% 55%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 98%) 100%);
+    
+    /* Custom shadows */
+    --shadow-sm: 0 2px 8px -2px hsl(220 70% 45% / 0.1);
+    --shadow-md: 0 8px 24px -4px hsl(220 70% 45% / 0.15);
+    --shadow-lg: 0 16px 48px -8px hsl(220 70% 45% / 0.2);
+    --shadow-glow: 0 0 40px hsl(220 80% 55% / 0.25);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 220 30% 8%;
+    --foreground: 220 10% 98%;
+
+    --card: 220 28% 11%;
+    --card-foreground: 220 10% 98%;
+
+    --popover: 220 28% 11%;
+    --popover-foreground: 220 10% 98%;
+
+    --primary: 220 75% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 220 85% 65%;
+
+    --secondary: 220 20% 16%;
+    --secondary-foreground: 220 10% 98%;
+
+    --muted: 220 20% 16%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 260 70% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 18%;
+    --input: 220 20% 18%;
+    --ring: 220 75% 55%;
+
+    --sidebar-background: 220 30% 9%;
+    --sidebar-foreground: 220 10% 98%;
+    --sidebar-primary: 260 70% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 14%;
+    --sidebar-accent-foreground: 220 10% 98%;
+    --sidebar-border: 220 20% 16%;
+    --sidebar-ring: 260 70% 60%;
+
+    --gradient-card: linear-gradient(180deg, hsl(220 28% 11%) 0%, hsl(220 30% 9%) 100%);
+    --shadow-glow: 0 0 40px hsl(220 85% 65% / 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .hover-lift {
+    @apply transition-smooth hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .prose {
+    @apply max-w-none;
+  }
+
+  .prose p {
+    @apply mb-4 leading-relaxed;
+  }
+
+  .prose h2 {
+    @apply text-2xl font-bold mt-8 mb-4;
+  }
+
+  .prose h3 {
+    @apply text-xl font-semibold mt-6 mb-3;
+  }
+
+  .prose ul, .prose ol {
+    @apply mb-4 ml-6;
+  }
+
+  .prose li {
+    @apply mb-2;
+  }
+
+  .prose a {
+    @apply text-primary hover:underline;
+  }
+
+  .prose code {
+    @apply bg-muted px-2 py-1 rounded text-sm font-mono;
+  }
+
+  .prose pre {
+    @apply bg-card p-4 rounded-lg overflow-x-auto mb-4;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-primary pl-4 italic my-4;
+  }
+  
+  /* Hide sidebar rail/edge trigger */
+  [data-sidebar="rail"] {
+    @apply hidden !important;
+  }
+}

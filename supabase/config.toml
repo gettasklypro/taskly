@@ -1,0 +1,37 @@
+project_id = "xllvfvakvjrdcpmkqnck"
+
+[functions.generate-website-template]
+verify_jwt = true
+
+[functions.import-website]
+verify_jwt = true
+
+[functions.add-vercel-domain]
+verify_jwt = true
+
+[functions.remove-vercel-domain]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.request-password-reset]
+verify_jwt = false
+
+[functions.validate-reset-token]
+verify_jwt = false
+
+[functions.reset-password]
+verify_jwt = false
+
+[functions.create-bulk-accounts]
+verify_jwt = true
+
+[functions.delete-user]
+verify_jwt = true
+
+[functions.extract-website-data]
+verify_jwt = true
+
+[functions.process-website-batch]
+verify_jwt = true
