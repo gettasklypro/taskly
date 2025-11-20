@@ -54,35 +54,21 @@ serve(async (req) => {
       ? { prompt: website_url, category: "business", businessName: business_name, userId: userId }
       : { prompt: `Create a professional website for ${business_name}`, category: "business", businessName: business_name, userId: userId };
 
-    // Call generate-website-template using service role authorization
-    console.log('Calling generate-website-template with payload:', generatePayload);
-    // Call generate-website-template without forwarding the service-role Authorization header.
-    // We include `userId` in the payload so the generate function can operate without a user JWT.
-    const generateResponse = await fetch(`${supabaseUrl}/functions/v1/generate-website-template`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Send the service role token so the function call is authorized internally
-        'Authorization': `Bearer ${supabaseServiceKey}`,
-        // also include userId in a header to ensure the generate function can read it
-        'x-user-id': userId
-      },
-      body: JSON.stringify(generatePayload)
+    // Call generate-website-template using the Supabase client functions.invoke
+    // This ensures the internal call is authenticated and the payload is delivered reliably.
+    console.log('Calling generate-website-template via supabaseClient.functions.invoke with payload:', generatePayload);
+    const { data: genData, error: genError } = await supabaseClient.functions.invoke('generate-website-template', {
+      body: generatePayload
     });
 
-    console.log('generate-website-template response status:', generateResponse.status);
-    const genRespHeaders: Record<string, string> = {};
-    for (const [k, v] of generateResponse.headers.entries()) genRespHeaders[k] = v;
-    console.log('generate-website-template response headers:', genRespHeaders);
-
-    if (!generateResponse.ok) {
-      const errorText = await generateResponse.text();
-      console.error('Generation failed:', errorText);
-      throw new Error(`Generation failed: ${errorText}`);
+    if (genError) {
+      console.error('Generation failed (supabase functions.invoke):', genError);
+      throw new Error(`Generation failed: ${JSON.stringify(genError)}`);
     }
 
-    const { websiteId } = await generateResponse.json();
-    console.log('Website generated:', websiteId);
+    // genData should contain the parsed JSON response from the generate function
+    const websiteId = (genData && genData.websiteId) || (genData && genData.data && genData.data.websiteId) || null;
+    console.log('Website generated (invoke):', websiteId, 'raw response:', genData);
 
     // Step 3: Auto-publish if requested
     if (auto_publish) {
