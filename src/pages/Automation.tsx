@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +12,19 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ExcelRow {
   lead_id: string;
-  contact_name: string;
+  first_name: string;
+  last_name: string;
   business_name: string;
-  contact_tel: string;
-  taskly_login_email: string;
-  website_url: string;
-  we_built: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  site_built: string;
+  source: string;
+  taskly_login: string;
+  country: string;
+  niche: string;
+  tags: string;
   notes: string;
 }
 
@@ -49,12 +56,19 @@ export const Automation = () => {
         
         const parsedRows: ExcelRow[] = jsonData.map((row: any) => ({
           lead_id: row["Lead ID"] || "",
-          contact_name: row["Contact Name"] || "",
+          first_name: row["First Name"] || "",
+          last_name: row["Last Name"] || "",
           business_name: row["Business Name"] || "",
-          contact_tel: row["Contact Tel"] || "",
-          taskly_login_email: row["Taskly Login Email"] || "",
-          website_url: row["Website URL"] || "",
-          we_built: row["We Built"] || "",
+          address: row["Address"] || "",
+          phone: row["Phone"] || "",
+          email: row["Email"] || "",
+          website: row["Website"] || "",
+          site_built: row["Site Built"] || "",
+          source: row["Source"] || "",
+          taskly_login: row["Taskly Login"] || "",
+          country: row["Country"] || "",
+          niche: row["Niche"] || "",
+          tags: row["Tags"] || "",
           notes: row["Notes"] || ""
         }));
 
@@ -107,7 +121,7 @@ export const Automation = () => {
       const row = rows[i];
       
       // Skip if already built
-      if (row.we_built) {
+      if (row.site_built) {
         addLog(`Skipping ${row.business_name} - already built`);
         continue;
       }
@@ -116,18 +130,29 @@ export const Automation = () => {
       setProgress(((i + 1) / rows.length) * 100);
 
       try {
-        // Auto-generate email if missing
-        const email = row.taskly_login_email || generateEmail(row.lead_id);
-        
+        // Auto-generate Taskly login email if missing; preserve owner's email separately
+        const tasklyEmail = row.taskly_login || generateEmail(row.lead_id);
+        const ownerEmail = row.email || null;
+
         addLog(`Processing ${row.business_name}...`);
 
-        // Call batch processing endpoint
+        // Call batch processing endpoint with richer dataset (niche, tags, address, etc.)
         const { data, error } = await supabase.functions.invoke('process-website-batch', {
           body: {
-            email,
+            lead_id: row.lead_id,
+            first_name: row.first_name,
+            last_name: row.last_name,
             business_name: row.business_name,
-            mode: row.website_url ? "url" : "describe",
-            website_url: row.website_url || null,
+            address: row.address || null,
+            phone: row.phone || null,
+            owner_email: ownerEmail,
+            taskly_email: tasklyEmail,
+            source: row.source || null,
+            country: row.country || null,
+            niche: row.niche || null,
+            tags: row.tags || null,
+            mode: row.website ? "url" : "describe",
+            website_url: row.website || null,
             auto_publish: true
           }
         });
@@ -135,12 +160,12 @@ export const Automation = () => {
         if (error) throw error;
 
         // Update row with results
-        rows[i].taskly_login_email = email;
-        rows[i].we_built = data.subdomain;
+        rows[i].taskly_login = tasklyEmail;
+        rows[i].site_built = data.subdomain || data.url || "";
         rows[i].notes = "Published successfully";
         setRows([...rows]);
 
-        addLog(`✓ ${row.business_name} published: ${data.subdomain}`);
+        addLog(`✓ ${row.business_name} published: ${data.subdomain || data.url}`);
         
         // Add to generated websites list
         setGeneratedWebsites(prev => [...prev, {
@@ -170,12 +195,19 @@ export const Automation = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       rows.map(row => ({
         "Lead ID": row.lead_id,
-        "Contact Name": row.contact_name,
+        "First Name": row.first_name,
+        "Last Name": row.last_name,
         "Business Name": row.business_name,
-        "Contact Tel": row.contact_tel,
-        "Taskly Login Email": row.taskly_login_email,
-        "Website URL": row.website_url,
-        "We Built": row.we_built,
+        "Address": row.address,
+        "Phone": row.phone,
+        "Email": row.email,
+        "Website": row.website,
+        "Site Built": row.site_built,
+        "Source": row.source,
+        "Taskly Login": row.taskly_login,
+        "Country": row.country,
+        "Niche": row.niche,
+        "Tags": row.tags,
         "Notes": row.notes
       }))
     );
@@ -228,10 +260,10 @@ export const Automation = () => {
         <Card>
           <CardHeader>
             <CardTitle>Upload Excel File</CardTitle>
-            <CardDescription>
-              Upload a file with columns: Lead ID, Contact Name, Business Name, Contact Tel, 
-              Taskly Login Email, Website URL, We Built, Notes
-            </CardDescription>
+                <CardDescription>
+                  Upload a file with columns: Lead ID, First Name, Last Name, Business Name, Address, Phone, Email, Website, Site Built, Source, Taskly Login, Country, Niche, Tags, Notes.
+                  The <strong>Niche</strong> should describe the website/business so AI can generate a site tailored to that niche (or the owner website will be used when present).
+                </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-4">
