@@ -56,10 +56,11 @@ serve(async (req) => {
 
     // Call generate-website-template using service role authorization
     console.log('Calling generate-website-template with payload:', generatePayload);
+    // Call generate-website-template without forwarding the service-role Authorization header.
+    // We include `userId` in the payload so the generate function can operate without a user JWT.
     const generateResponse = await fetch(`${supabaseUrl}/functions/v1/generate-website-template`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${supabaseServiceKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(generatePayload)
