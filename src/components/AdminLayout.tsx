@@ -11,10 +11,10 @@ interface AdminLayoutProps {
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/customers", label: "Customers", icon: Users },
-  { path: "/admin/crm", label: "CRM", icon: Briefcase },
+  { path: "/admin/trials", label: "Trials", icon: Briefcase },
   { path: "/admin/promos", label: "Promos", icon: Tag },
   { path: "/admin/users", label: "Manage Users", icon: Shield },
-  { path: "/admin/automation", label: "Automation", icon: Bot },
+  { path: "/admin/bulk-sites", label: "Bulk Sites", icon: Bot },
   { path: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
