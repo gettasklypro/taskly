@@ -76,7 +76,7 @@ const App = () => (
           <Route path="/timesheets" element={<ProtectedRoute><Layout><Timesheets /></Layout></ProtectedRoute>} />
           <Route path="/tasks" element={<ProtectedRoute><Layout><Tasks /></Layout></ProtectedRoute>} />
           <Route path="/marketing" element={<ProtectedRoute><Layout><Marketing /></Layout></ProtectedRoute>} />
-          <Route path="/automation" element={<ProtectedRoute><Layout><Automation /></Layout></ProtectedRoute>} />
+          {/* Removed old /automation route */}
           <Route path="/schedule" element={<ProtectedRoute><Layout><Schedule /></Layout></ProtectedRoute>} />
           <Route path="/website-builder" element={<ProtectedRoute><Layout><WebsiteBuilder /></Layout></ProtectedRoute>} />
           <Route path="/website-builder/my-sites" element={<ProtectedRoute><Layout><MySites /></Layout></ProtectedRoute>} />
