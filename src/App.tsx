@@ -25,7 +25,7 @@ import { Expenses } from "./pages/Expenses";
 import { Timesheets } from "./pages/Timesheets";
 import { Tasks } from "./pages/Tasks";
 import { Marketing } from "./pages/Marketing";
-import BulkSites from "./pages/BulkSites";
+import { Automation } from "./pages/Automation";
 import { Schedule } from "./pages/Schedule";
 import { WebsiteBuilder } from "./pages/WebsiteBuilder";
 import { WebsiteEditor } from "./pages/WebsiteEditor";
@@ -90,7 +90,7 @@ const App = () => (
           <Route path="/admin/trials" element={<ProtectedRoute><AdminRoute><AdminLayout><Trials /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="/admin/promos" element={<ProtectedRoute><AdminRoute><AdminLayout><AdminPromos /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute></ProtectedRoute>} />
-          <Route path="/admin/bulk-sites" element={<ProtectedRoute><AdminRoute><AdminLayout><BulkSites /></AdminLayout></AdminRoute></ProtectedRoute>} />
+          <Route path="/admin/automation" element={<ProtectedRoute><AdminRoute><AdminLayout><Automation /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute><AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -14,7 +14,7 @@ const navItems = [
   { path: "/admin/trials", label: "Trials", icon: Briefcase },
   { path: "/admin/promos", label: "Promos", icon: Tag },
   { path: "/admin/users", label: "Manage Users", icon: Shield },
-  { path: "/admin/bulk-sites", label: "Bulk Sites", icon: Bot },
+  { path: "/admin/automation", label: "Bulk Sites", icon: Bot },
   { path: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
