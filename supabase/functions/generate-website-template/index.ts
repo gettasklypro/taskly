@@ -15,17 +15,17 @@ serve(async (req) => {
   try {
     console.log('Edge function called');
     // Log all request headers
-    const allHeaders = {};
+    const allHeaders: Record<string, string> = {};
     for (const [key, value] of req.headers.entries()) {
       allHeaders[key] = value;
     }
     console.log('Request headers:', allHeaders);
     // Log raw Authorization header
     console.log('Raw Authorization header:', req.headers.get('Authorization'));
-    
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    
+
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('Missing Supabase environment variables');
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
@@ -33,7 +33,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
+
     const supabaseClient = createClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -45,14 +45,10 @@ serve(async (req) => {
     );
 
     const { prompt, category, businessName, userId } = await req.json();
-    
+
     // Determine the user ID - either from the request (batch mode) or from auth (normal mode)
     let effectiveUserId: string;
-    
-    if (userId) {
-      // Batch mode: userId provided in request body (called with service role)
-      console.log('Using provided userId from batch:', userId);
-      effectiveUserId = userId;
+
     if (userId) {
       // Batch mode: userId provided in request body (called with service role)
       console.log('Using provided userId from batch:', userId);
@@ -91,11 +87,11 @@ serve(async (req) => {
     let websiteContext = '';
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const urls = prompt.match(urlRegex);
-    
+
     if (urls && urls.length > 0) {
       const targetUrl = urls[0];
       console.log('Detected URL in prompt, fetching website content:', targetUrl);
-      
+
       try {
         const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
         if (FIRECRAWL_API_KEY) {
@@ -128,22 +124,17 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
 
     // Helper function to fetch images from Pexels with randomization
     const fetchPexelsImage = async (query: string, size: 'large' | 'medium' = 'large'): Promise<string> => {
       try {
         console.log('Fetching Pexels image for:', query);
-        
+
         // Fetch multiple images and randomly select one for diversity
         const perPage = 15;
         const randomPage = Math.floor(Math.random() * 3) + 1; // Random page between 1-3
-        
+
         const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${perPage}&page=${randomPage}&orientation=landscape`, {
           headers: {
             'Authorization': PEXELS_API_KEY || ''
@@ -164,7 +155,7 @@ serve(async (req) => {
           console.log(`Pexels image fetched successfully (${randomIndex + 1} of ${data.photos.length})`);
           return imageUrl;
         }
-        
+
         return '';
       } catch (error) {
         console.error('Pexels fetch error:', error);
@@ -418,7 +409,7 @@ CRITICAL RULES YOU MUST FOLLOW:
 20. Colors MUST be in HSL format: "220 90% 56%" (three numbers with spaces)
 21. CRITICAL: Contact section MUST always include the "fields" array with EXACTLY these 3 fields: Name (text), Email (email), Message (textarea)
 22. Contact section MUST be last before footer on homepage
-23. Each page MUST have navigation and footer sections`
+23. Each page MUST have navigation and footer sections`;
 
     const userPrompt = `Business Name: ${businessName || 'Professional Business'}
 Industry Category: ${category}
@@ -447,7 +438,7 @@ ${websiteContext ? '1. PRIMARY GOAL: Match the style, tone, structure, and conte
 
 ${websiteContext ? '\nCRITICAL REMINDER: The analyzed website above is your REFERENCE MODEL. Generate content that matches its professional quality, style, and industry approach.' : `\nCreate a professional ${category} website that builds credibility and drives conversions through clear value communication.`}
 
-OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
+OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`;
 
     const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY');
     if (!CLAUDE_API_KEY) {
@@ -458,9 +449,13 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
       });
     }
 
+    // IMPORTANT: declare aiContent here so it's available after the try/catch block
+    let aiContent = '';
+    let templateData: any = null;
+
     try {
       const aiPayload = {
-        model: 'claude-3-opus-20240229',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 4096,
         temperature: 0.3,
         system: systemPrompt,
@@ -490,11 +485,69 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
         });
       }
 
-      // Continue with parsing as before
-      const aiData = JSON.parse(responseText);
-      const aiContent = aiData.choices[0].message.content;
-      console.log('AI Response:', aiContent);
-      // ...existing code...
+      // Try to parse JSON safely. If parsing fails, assume raw text.
+      let aiData: any = null;
+      try {
+        aiData = JSON.parse(responseText);
+      } catch (jsonErr) {
+        console.warn('Failed to parse Claude response as JSON; falling back to raw text. parse error:', jsonErr);
+        aiData = null;
+      }
+
+      // Flexible extraction to handle different Claude/Anthropic shapes
+      const extractTextFromAnthropic = (data: any, rawText: string) => {
+        // 1) If content array present (your previous code expected this)
+        if (data && Array.isArray(data.content) && data.content.length > 0) {
+          try {
+            return data.content.map((c: any) => {
+              if (typeof c === 'string') return c;
+              if (c && typeof c.text === 'string') return c.text;
+              if (c && (c?.role || c?.type) && c?.message) return String(c.message);
+              return '';
+            }).join('\n');
+          } catch (e) {
+            console.warn('Error concatenating data.content:', e);
+          }
+        }
+
+        // 2) Common anthropic fields
+        if (data && typeof data.completion === 'string') {
+          return data.completion;
+        }
+        if (data && data.output && typeof data.output === 'object') {
+          if (typeof data.output.text === 'string') return data.output.text;
+          if (Array.isArray(data.output.parts)) return data.output.parts.join('\n');
+        }
+
+        // 3) If Claude returns top-level 'text' or similar
+        if (data && typeof data.text === 'string') {
+          return data.text;
+        }
+
+        // 4) Look for nested message content parts
+        if (data && data.message && Array.isArray(data.message.content)) {
+          // e.g., message.content = [{type:'output_text', text: '...'}]
+          try {
+            return data.message.content.map((p: any) => p.text || p.parts?.join?.('\n') || '').join('\n');
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        // 5) Fallback to raw text response
+        return rawText;
+      };
+
+      aiContent = extractTextFromAnthropic(aiData, responseText);
+      console.log('AI Response (extracted):', aiContent);
+
+      if (!aiContent || aiContent.trim().length === 0) {
+        console.error('Claude returned empty response after extraction', { aiData, responseText });
+        return new Response(JSON.stringify({ error: 'Claude returned empty response' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     } catch (err) {
       console.error('Claude API call failed:', err);
       return new Response(JSON.stringify({ error: `Claude API call failed: ${err}` }), {
@@ -503,41 +556,14 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
       });
     }
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: 'AI credits exhausted. Please add credits to continue.' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      throw new Error(`AI API error: ${aiResponse.status}`);
-    }
-
-    const aiData = await aiResponse.json();
-    const aiContent = aiData.choices[0].message.content;
-
-    console.log('AI Response:', aiContent);
-
     // Parse and validate the JSON from AI response
-    let templateData;
     try {
       // Extract JSON from markdown code blocks if present
-      const jsonMatch = aiContent.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) || 
+      const jsonMatch = aiContent.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) ||
                        aiContent.match(/(\{[\s\S]*\})/);
       const jsonStr = jsonMatch ? jsonMatch[1] : aiContent;
       templateData = JSON.parse(jsonStr);
-      
+
       // Validate critical structure
       if (!templateData.websiteName || typeof templateData.websiteName !== 'string') {
         throw new Error('Invalid or missing websiteName');
@@ -548,7 +574,7 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
       if (!Array.isArray(templateData.pages) || templateData.pages.length === 0) {
         throw new Error('Invalid or missing pages array');
       }
-      
+
       // Validate homepage exists and has required sections
       const homepage = templateData.pages.find((p: any) => p.isHomepage);
       if (!homepage) {
@@ -557,7 +583,7 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
       if (!Array.isArray(homepage.sections) || homepage.sections.length < 9) {
         throw new Error(`Homepage must have at least 9 sections, found ${homepage.sections?.length || 0}`);
       }
-      
+
       // Validate required section types exist on homepage
       const requiredSections = ['navigation', 'hero', 'about', 'services', 'stats', 'projects', 'testimonials', 'cta', 'contact', 'footer'];
       const homepageSectionTypes = homepage.sections.map((s: any) => s.type);
@@ -565,17 +591,17 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
       if (missingSections.length > 0) {
         console.warn('Missing sections:', missingSections);
       }
-      
+
       // Validate services section
       const servicesSection = homepage.sections.find((s: any) => s.type === 'services');
       if (servicesSection && (!Array.isArray(servicesSection.items) || servicesSection.items.length !== 6)) {
         console.warn(`Services section should have exactly 6 items, found ${servicesSection.items?.length || 0}`);
       }
-      
+
       console.log('Template validation successful');
     } catch (parseError) {
       console.error('Failed to parse or validate AI response:', parseError);
-      console.error('AI Response:', aiContent);
+      console.error('AI Response (raw):', aiContent);
       throw new Error(`Failed to parse AI generated template: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
 
@@ -650,8 +676,8 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         websiteId: website.id,
         websiteName: templateData.websiteName,
         message: 'Website template generated successfully!'
@@ -665,7 +691,7 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`
   } catch (error) {
     console.error('Error in generate-website-template:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error instanceof Error ? error.message : 'An error occurred generating the template'
       }),
       {
