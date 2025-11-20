@@ -14,9 +14,14 @@ const Trials = () => {
       setTrialUsers((profiles || []).filter(
         (profile) => profile.trial_end_date && new Date(profile.trial_end_date) > now
       ));
-      // Fetch bulk accounts
+
+      // Fetch bulk accounts (created via bulk function, e.g. leads with a bulk flag or similar)
       const { data: leads } = await supabase.from("leads").select("*");
-      setBulkAccounts(leads || []);
+      // If there's a bulk flag, filter by it, otherwise show all leads
+      const bulkCreated = (leads || []).filter(
+        (lead) => lead.is_bulk_account === true || lead.bulk_created === true || lead.status === 'bulk' // adjust as needed
+      );
+      setBulkAccounts(bulkCreated);
     };
     fetchTrials();
   }, []);
