@@ -1,7 +1,7 @@
 project_id = "xllvfvakvjrdcpmkqnck"
 
 [functions.generate-website-template]
-verify_jwt = true
+verify_jwt = false
 
 [functions.import-website]
 verify_jwt = true
