@@ -45,17 +45,30 @@ serve(async (req) => {
       }
     );
 
-    const { prompt, category, businessName, userId } = await req.json();
+    // Read and log raw body to diagnose missing fields or parsing issues
+    const rawBodyText = await req.text();
+    console.log('Raw request body text:', rawBodyText);
+    let parsedBody: any = {};
+    try {
+      parsedBody = rawBodyText ? JSON.parse(rawBodyText) : {};
+      console.log('Parsed request body:', parsedBody);
+    } catch (err) {
+      console.warn('Failed to parse request body as JSON:', err);
+    }
+
+    const { prompt, category, businessName, userId } = parsedBody;
 
     // Determine the user ID - either from the request (batch mode) or from auth (normal mode)
     let effectiveUserId: string;
 
     const authHeader = req.headers.get('Authorization') || '';
+    const headerUserId = req.headers.get('x-user-id');
 
-    if (userId) {
+    if (userId || headerUserId) {
       // Batch mode: userId provided in request body (called with service role)
-      console.log('Using provided userId from batch:', userId);
-      effectiveUserId = userId;
+      const resolvedUserId = userId || headerUserId;
+      console.log('Using provided userId from batch/header:', resolvedUserId);
+      effectiveUserId = resolvedUserId;
     } else if (supabaseServiceRoleKey && authHeader === `Bearer ${supabaseServiceRoleKey}`) {
       // Request is authenticated with the service role key but no userId provided
       // Avoid calling auth.getUser() with a service role token (not a user JWT).

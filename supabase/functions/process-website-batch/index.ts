@@ -61,7 +61,9 @@ serve(async (req) => {
     const generateResponse = await fetch(`${supabaseUrl}/functions/v1/generate-website-template`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        // also include userId in a header to ensure the generate function can read it
+        'x-user-id': userId
       },
       body: JSON.stringify(generatePayload)
     });
