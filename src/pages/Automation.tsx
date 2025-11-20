@@ -131,7 +131,10 @@ export const Automation = () => {
 
       try {
         // Auto-generate Taskly login email if missing; preserve owner's email separately
-        const tasklyEmail = row.taskly_login || generateEmail(row.lead_id);
+        const rawTaskly = row.taskly_login || "";
+        const tasklyEmail = rawTaskly
+          ? (rawTaskly.includes('@') ? rawTaskly : `${rawTaskly}@gettaskly.ai`)
+          : generateEmail(row.lead_id);
         const ownerEmail = row.email || null;
 
         addLog(`Processing ${row.business_name}...`);
@@ -146,7 +149,8 @@ export const Automation = () => {
             address: row.address || null,
             phone: row.phone || null,
             owner_email: ownerEmail,
-            taskly_email: tasklyEmail,
+            // `email` is required by the batch processor to create the Taskly user
+            email: tasklyEmail,
             source: row.source || null,
             country: row.country || null,
             niche: row.niche || null,
