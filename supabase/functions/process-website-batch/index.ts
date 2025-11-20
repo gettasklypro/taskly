@@ -62,6 +62,8 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // Send the service role token so the function call is authorized internally
+        'Authorization': `Bearer ${supabaseServiceKey}`,
         // also include userId in a header to ensure the generate function can read it
         'x-user-id': userId
       },
