@@ -11,7 +11,7 @@ import { SubdomainRouter } from "./components/SubdomainRouter";
 import { Dashboard } from "./pages/Dashboard";
 import { Admin } from "./pages/Admin";
 import { AdminCustomers } from "./pages/AdminCustomers";
-import AdminCRM from "./pages/AdminCRM";
+import Trials from "./pages/Trials";
 import { AdminPromos } from "./pages/AdminPromos";
 import { AdminUsers } from "./pages/AdminUsers";
 import { AdminSettings } from "./pages/AdminSettings";
@@ -25,7 +25,7 @@ import { Expenses } from "./pages/Expenses";
 import { Timesheets } from "./pages/Timesheets";
 import { Tasks } from "./pages/Tasks";
 import { Marketing } from "./pages/Marketing";
-import { Automation } from "./pages/Automation";
+import BulkSites from "./pages/BulkSites";
 import { Schedule } from "./pages/Schedule";
 import { WebsiteBuilder } from "./pages/WebsiteBuilder";
 import { WebsiteEditor } from "./pages/WebsiteEditor";
@@ -87,10 +87,10 @@ const App = () => (
           <Route path="/support" element={<ProtectedRoute><Layout><Support /></Layout></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminLayout><Admin /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="/admin/customers" element={<ProtectedRoute><AdminRoute><AdminLayout><AdminCustomers /></AdminLayout></AdminRoute></ProtectedRoute>} />
-          <Route path="/admin/crm" element={<ProtectedRoute><AdminRoute><AdminLayout><AdminCRM /></AdminLayout></AdminRoute></ProtectedRoute>} />
+          <Route path="/admin/trials" element={<ProtectedRoute><AdminRoute><AdminLayout><Trials /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="/admin/promos" element={<ProtectedRoute><AdminRoute><AdminLayout><AdminPromos /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute></ProtectedRoute>} />
-          <Route path="/admin/automation" element={<ProtectedRoute><AdminRoute><AdminLayout><Automation /></AdminLayout></AdminRoute></ProtectedRoute>} />
+          <Route path="/admin/bulk-sites" element={<ProtectedRoute><AdminRoute><AdminLayout><BulkSites /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute><AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
