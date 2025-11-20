@@ -25,6 +25,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('Missing Supabase environment variables');
@@ -49,12 +50,22 @@ serve(async (req) => {
     // Determine the user ID - either from the request (batch mode) or from auth (normal mode)
     let effectiveUserId: string;
 
+    const authHeader = req.headers.get('Authorization') || '';
+
     if (userId) {
       // Batch mode: userId provided in request body (called with service role)
       console.log('Using provided userId from batch:', userId);
       effectiveUserId = userId;
+    } else if (supabaseServiceRoleKey && authHeader === `Bearer ${supabaseServiceRoleKey}`) {
+      // Request is authenticated with the service role key but no userId provided
+      // Avoid calling auth.getUser() with a service role token (not a user JWT).
+      console.error('Service role request missing userId');
+      return new Response(JSON.stringify({ error: 'Missing userId for service role request' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } else {
-      // Normal mode: authenticate the user
+      // Normal mode: authenticate the user using the provided Authorization header (session JWT)
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
       console.log('getUser() result:', { user, authError });
       if (authError) {
