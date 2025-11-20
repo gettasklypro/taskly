@@ -55,6 +55,7 @@ serve(async (req) => {
       : { prompt: `Create a professional website for ${business_name}`, category: "business", businessName: business_name, userId: userId };
 
     // Call generate-website-template using service role authorization
+    console.log('Calling generate-website-template with payload:', generatePayload);
     const generateResponse = await fetch(`${supabaseUrl}/functions/v1/generate-website-template`, {
       method: 'POST',
       headers: {
@@ -63,6 +64,11 @@ serve(async (req) => {
       },
       body: JSON.stringify(generatePayload)
     });
+
+    console.log('generate-website-template response status:', generateResponse.status);
+    const genRespHeaders: Record<string, string> = {};
+    for (const [k, v] of generateResponse.headers.entries()) genRespHeaders[k] = v;
+    console.log('generate-website-template response headers:', genRespHeaders);
 
     if (!generateResponse.ok) {
       const errorText = await generateResponse.text();

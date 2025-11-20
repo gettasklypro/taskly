@@ -467,7 +467,10 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`;
       const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
+          // Some Anthropic deployments accept either x-api-key or Authorization: Bearer <key>.
+          // Send both to maximize compatibility across regions/versions.
           'x-api-key': CLAUDE_API_KEY,
+          'Authorization': `Bearer ${CLAUDE_API_KEY}`,
           'content-type': 'application/json',
           'anthropic-version': '2023-06-01'
         },
@@ -475,6 +478,11 @@ OUTPUT: Return ONLY the raw JSON object with no markdown formatting.`;
       });
 
       console.log('Claude API response status:', aiResponse.status);
+      // Log response headers for debugging 401/Invalid JWT issues
+      const aiRespHeaders: Record<string, string> = {};
+      for (const [k, v] of aiResponse.headers.entries()) aiRespHeaders[k] = v;
+      console.log('Claude response headers:', aiRespHeaders);
+
       const responseText = await aiResponse.text();
       console.log('Claude API response body:', responseText);
 
