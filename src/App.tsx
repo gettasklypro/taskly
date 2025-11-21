@@ -45,6 +45,7 @@ import { TermsAndConditions } from "./pages/TermsAndConditions";
 import { RefundPolicy } from "./pages/RefundPolicy";
 import NotFound from "./pages/NotFound";
 import PublicWebsiteViewer from "./pages/PublicWebsiteViewer";
+import { CheckoutSuccess } from "./pages/CheckoutSuccess";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const App = () => (
           <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
           <Route path="/settings/profile" element={<ProtectedRoute><Layout><ProfileSettings /></Layout></ProtectedRoute>} />
           <Route path="/pricing" element={<ProtectedRoute><Layout><Pricing /></Layout></ProtectedRoute>} />
+          <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccess /></ProtectedRoute>} />
           <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
           <Route path="/support" element={<ProtectedRoute><Layout><Support /></Layout></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminLayout><Admin /></AdminLayout></AdminRoute></ProtectedRoute>} />
