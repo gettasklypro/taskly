@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, CheckCircle2, Wind, Wrench, Building2, Zap, Hammer, Trees, Droplet, Leaf, PaintBucket, Home, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import tasklyLogo from "@/assets/taskly-logo.png";
@@ -10,8 +10,20 @@ import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { FAQSection } from "@/components/landing/FAQSection";
 import { FeatureShowcaseSection } from "@/components/landing/FeatureShowcaseSection";
 import { RefundPolicySection } from "@/components/landing/RefundPolicySection";
+import { useEffect } from "react";
 
 export const Landing = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Check for Paddle transaction ID and redirect to success page
+  useEffect(() => {
+    const transactionId = searchParams.get('_ptxn');
+    if (transactionId) {
+      navigate(`/checkout/success?_ptxn=${transactionId}`);
+    }
+  }, [searchParams, navigate]);
+
   const industries = [
     { name: "Arborists", icon: Trees },
     { name: "Commercial Cleaning", icon: Sparkles },
@@ -35,7 +47,7 @@ export const Landing = () => {
           <div className="flex items-center">
             <img src={tasklyLogo} alt="TASKLY" className="h-8 w-auto object-contain dark:invert-0 invert" />
           </div>
-          
+
           <div className="hidden md:flex items-center gap-8">
             <a href="#benefits" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Benefits
