@@ -34,12 +34,32 @@ export const AdminPromos = () => {
 
   const createMutation = useMutation({
     mutationFn: async (newPromo: any) => {
-      const { error } = await supabase.from("promo_codes").insert(newPromo);
+      // First, create the discount in Paddle
+      const { data: paddleData, error: paddleError } = await supabase.functions.invoke('create-paddle-discount', {
+        body: {
+          code: newPromo.code,
+          discount_value: newPromo.discount_value,
+          discount_type: newPromo.discount_type,
+          expires_at: newPromo.expires_at,
+          max_uses: newPromo.max_uses
+        }
+      });
+
+      if (paddleError || !paddleData?.success) {
+        throw new Error(paddleData?.error || 'Failed to create discount in Paddle');
+      }
+
+      // Then create the promo code in our database with Paddle discount ID
+      const { error } = await supabase.from("promo_codes").insert({
+        ...newPromo,
+        paddle_discount_id: paddleData.paddleDiscountId
+      });
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-promos"] });
-      toast.success("Promo code created successfully");
+      toast.success("Promo code created and synced to Paddle successfully");
       setOpen(false);
       setCode("");
       setDiscountValue("");
