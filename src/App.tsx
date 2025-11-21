@@ -47,6 +47,7 @@ import NotFound from "./pages/NotFound";
 import PublicWebsiteViewer from "./pages/PublicWebsiteViewer";
 import { CheckoutSuccess } from "./pages/CheckoutSuccess";
 import { Billing } from "./pages/Billing";
+import BusinessPageSettings from "./pages/settings/business-page";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,7 @@ const App = () => (
           <Route path="/website-builder/edit/:websiteId" element={<ProtectedRoute><Layout><WebsiteEditor /></Layout></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
           <Route path="/settings/profile" element={<ProtectedRoute><Layout><ProfileSettings /></Layout></ProtectedRoute>} />
+          <Route path="/settings/business-page" element={<ProtectedRoute><Layout><BusinessPageSettings /></Layout></ProtectedRoute>} />
           <Route path="/settings/billing" element={<ProtectedRoute><Layout><Billing /></Layout></ProtectedRoute>} />
           <Route path="/pricing" element={<ProtectedRoute><Layout><Pricing /></Layout></ProtectedRoute>} />
           <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccess /></ProtectedRoute>} />
