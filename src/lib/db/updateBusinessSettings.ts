@@ -4,10 +4,10 @@ import { BusinessPageSettings } from '@/types/BusinessPageSettings';
 /**
  * Update business settings for the current website in Supabase
  */
-export async function updateBusinessSettings(settings: BusinessPageSettings) {
-  // Determine websiteId: prefer window.tasklyWebsiteId; otherwise, pick first website owned by current user
-  let websiteId = (window as any)?.tasklyWebsiteId;
-  if (!websiteId) {
+export async function updateBusinessSettings(settings: BusinessPageSettings, websiteId?: string) {
+  // Determine websiteId: priority -- explicit param, window.tasklyWebsiteId, current user first site
+  let id = websiteId || (window as any)?.tasklyWebsiteId;
+  if (!id) {
     try {
       const userRes = await supabase.auth.getUser();
       const user = userRes?.data?.user;
@@ -17,19 +17,40 @@ export async function updateBusinessSettings(settings: BusinessPageSettings) {
           .select('id')
           .eq('user_id', user.id)
           .limit(1);
-        if (siteErr) {
-          console.error('Failed to lookup website for user', siteErr);
-        }
-        if (sites && sites.length > 0) websiteId = sites[0].id as string;
+        if (siteErr) console.error('Failed to lookup website for user', siteErr);
+        if (sites && sites.length > 0) id = sites[0].id as string;
       }
     } catch (e) {
       console.error('Error getting user for website lookup', e);
     }
   }
 
-  if (!websiteId) {
+  if (!id) {
     console.error('No websiteId available to update business settings');
-    return { ok: false, error: 'No website selected' } as any;
+    // No website selected — persist settings to the user's profile so they can be applied
+    try {
+      const userRes = await supabase.auth.getUser();
+      const user = userRes?.data?.user;
+      if (!user?.id) return { ok: false, error: 'No authenticated user' } as any;
+      const { error: profErr } = await supabase
+        .from('profiles')
+        .update({
+          business_name: settings.business_name,
+          business_description: settings.business_description,
+          whatsapp_country_code: settings.whatsapp_country_code,
+          whatsapp_number: settings.whatsapp_number,
+          whatsapp_full_number: settings.whatsapp_full_number,
+        })
+        .eq('id', user.id);
+      if (profErr) {
+        console.error('Failed to update profile business settings', profErr);
+        return { ok: false, error: profErr.message || String(profErr) } as any;
+      }
+      return { ok: true } as any;
+    } catch (e) {
+      console.error('Error saving business settings to profile', e);
+      return { ok: false, error: String(e) } as any;
+    }
   }
 
   const { error } = await supabase
@@ -41,7 +62,7 @@ export async function updateBusinessSettings(settings: BusinessPageSettings) {
       whatsapp_number: settings.whatsapp_number,
       whatsapp_full_number: settings.whatsapp_full_number,
     })
-    .eq('id', websiteId);
+    .eq('id', id);
 
   if (error) {
     console.error('Failed to update business settings', error);
