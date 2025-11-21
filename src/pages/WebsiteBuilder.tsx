@@ -314,7 +314,8 @@ export const WebsiteBuilder = () => {
         }
       }
 
-      // Ensure website record has business/profile fields before publishing
+      // Prepare merged business fields from profile if website missing them
+      let mergedFields: Record<string, any> = {};
       try {
         const { data: existingSite } = await supabase.from('websites').select('user_id, business_name, business_description, whatsapp_country_code, whatsapp_number, whatsapp_full_number').eq('id', websiteId).single();
         if (existingSite) {
@@ -324,21 +325,17 @@ export const WebsiteBuilder = () => {
             if (ownerId) {
               const { data: profileData } = await supabase.from('profiles').select('business_name, business_description, whatsapp_country_code, whatsapp_number, whatsapp_full_number').eq('id', ownerId).single();
               if (profileData) {
-                const updateFields: any = {};
-                if (!existingSite.business_name && profileData.business_name) updateFields.business_name = profileData.business_name;
-                if (!existingSite.business_description && profileData.business_description) updateFields.business_description = profileData.business_description;
-                if (!existingSite.whatsapp_country_code && profileData.whatsapp_country_code) updateFields.whatsapp_country_code = profileData.whatsapp_country_code;
-                if (!existingSite.whatsapp_number && profileData.whatsapp_number) updateFields.whatsapp_number = profileData.whatsapp_number;
-                if (!existingSite.whatsapp_full_number && profileData.whatsapp_full_number) updateFields.whatsapp_full_number = profileData.whatsapp_full_number;
-                if (Object.keys(updateFields).length > 0) {
-                  await supabase.from('websites').update(updateFields).eq('id', websiteId);
-                }
+                if (!existingSite.business_name && profileData.business_name) mergedFields.business_name = profileData.business_name;
+                if (!existingSite.business_description && profileData.business_description) mergedFields.business_description = profileData.business_description;
+                if (!existingSite.whatsapp_country_code && profileData.whatsapp_country_code) mergedFields.whatsapp_country_code = profileData.whatsapp_country_code;
+                if (!existingSite.whatsapp_number && profileData.whatsapp_number) mergedFields.whatsapp_number = profileData.whatsapp_number;
+                if (!existingSite.whatsapp_full_number && profileData.whatsapp_full_number) mergedFields.whatsapp_full_number = profileData.whatsapp_full_number;
               }
             }
           }
         }
       } catch (e) {
-        console.error('Failed to merge profile business settings into website before publish', e);
+        console.error('Failed to prepare merged profile business settings before publish', e);
       }
 
       const updateData: any = { status: "published" };
@@ -347,7 +344,9 @@ export const WebsiteBuilder = () => {
       if (siteTitle) updateData.site_title = siteTitle;
       if (faviconUrl) updateData.favicon_url = faviconUrl;
 
-      const { error } = await supabase.from("websites").update(updateData).eq("id", websiteId);
+      // Include merged fields in the same update to ensure atomic write
+      const finalUpdate = Object.keys(mergedFields).length ? { ...updateData, ...mergedFields } : updateData;
+      const { error } = await supabase.from("websites").update(finalUpdate).eq("id", websiteId);
 
       if (error) throw error;
     },
