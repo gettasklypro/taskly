@@ -59,69 +59,30 @@ export const Billing = () => {
 
         setApplyingPromo(true);
         try {
-            // Validate promo code with Paddle
-            const { data: validationData, error: validationError } = await supabase.functions.invoke('validate-promo-code', {
-                body: {
-                    discount_code: promoCode,
-                    price_id: selectedPlan
-                }
-            });
+            toast.success("Opening checkout with promo code...");
 
-            if (validationError || !validationData?.valid) {
-                toast.error(validationData?.error || "Invalid promo code");
-                setApplyingPromo(false);
-                return;
-            }
-
-            // If it's a 100% discount, create subscription directly without checkout
-            if (validationData.is100Percent) {
-                toast.success("100% discount applied! Activating your subscription...");
-
-                // Create subscription record directly
-                const { error: subError } = await supabase
-                    .from('subscriptions')
-                    .upsert({
+            // Open Paddle checkout with the discount code
+            if (window.Paddle) {
+                window.Paddle.Checkout.open({
+                    items: [
+                        {
+                            priceId: selectedPlan,
+                            quantity: 1
+                        }
+                    ],
+                    customer: {
+                        email: user?.email
+                    },
+                    customData: {
                         user_id: user?.id,
-                        plan_id: selectedPlan,
-                        status: 'active',
-                        paddle_subscription_id: `promo_${Date.now()}`,
-                        current_period_start: new Date().toISOString(),
-                        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-                    });
-
-                if (subError) {
-                    console.error('Error creating subscription:', subError);
-                    toast.error("Failed to activate subscription");
-                } else {
-                    toast.success("Subscription activated successfully!");
-                    navigate('/dashboard');
-                }
-            } else {
-                // Open Paddle checkout with the discount code
-                toast.success("Promo code validated! Opening checkout...");
-
-                if (window.Paddle) {
-                    window.Paddle.Checkout.open({
-                        items: [
-                            {
-                                priceId: selectedPlan,
-                                quantity: 1
-                            }
-                        ],
-                        customer: {
-                            email: user?.email
-                        },
-                        customData: {
-                            user_id: user?.id,
-                            promo_code: promoCode
-                        },
-                        discountId: validationData.discountId
-                    });
-                }
+                        promo_code: promoCode
+                    },
+                    discountCode: promoCode
+                });
             }
         } catch (error) {
             console.error('Error applying promo:', error);
-            toast.error("Failed to apply promo code");
+            toast.error("Failed to open checkout");
         } finally {
             setApplyingPromo(false);
         }
