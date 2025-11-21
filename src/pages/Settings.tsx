@@ -34,7 +34,7 @@ export const Settings = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
             { icon: User, title: "Profile", desc: "Update your personal information", path: "/settings/profile" },
-            { icon: Building, title: "Business", desc: "Manage business details and branding", path: null },
+            { icon: Building, title: "Business", desc: "Manage business details and branding", path: "/settings/business-page" },
             { icon: CreditCard, title: "Billing", desc: "Subscription and payment methods", path: "/settings/billing" },
             { icon: Bell, title: "Notifications", desc: "Configure email and push notifications", path: null },
           ].map((setting, index) => (
