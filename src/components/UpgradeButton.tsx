@@ -1,31 +1,36 @@
 import React from 'react';
-import { useRouter } from 'next/router';
-import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 // UpgradeButton: triggers checkout creation and redirects to Paddle checkout URL
 export default function UpgradeButton({ planId }: { planId: string }) {
-  const router = useRouter();
-  const supabase = useSupabaseClient();
-  const session = useSession();
+  const navigate = useNavigate();
+  const { session } = useAuth();
 
   const handleUpgrade = async () => {
     if (!session?.user) {
-      router.push('/login');
+      navigate('/login');
       return;
     }
 
-    // Call server API to create checkout session
-    const res = await fetch('/api/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan_id: planId, user_id: session.user.id }),
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          plan_id: planId,
+          user_id: session.user.id,
+          email: session.user.email,
+        },
+      });
 
-    const data = await res.json();
-    if (data?.url) {
-      // Redirect to Paddle Checkout
-      window.location.href = data.url;
-    } else {
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
       alert('Failed to create checkout session');
     }
   };
