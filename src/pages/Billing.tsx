@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+  import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -70,14 +70,19 @@ export const Billing = () => {
         }
         setApplyingPromo(true);
         try {
-            // Get promo details from DB
+            // Get promo details from DB. Use maybeSingle() so zero rows returns null instead of an error.
             const { data: promo, error: promoErr } = await supabase
                 .from("promo_codes")
                 .select("*")
                 .eq("code", promoCode.toUpperCase())
-                .single();
+                .maybeSingle();
             if (promoErr) {
                 console.error("Promo fetch error", promoErr);
+                toast.error("Promo code not found or invalid");
+                return;
+            }
+            if (!promo) {
+                // No promo found
                 toast.error("Promo code not found or invalid");
                 return;
             }
