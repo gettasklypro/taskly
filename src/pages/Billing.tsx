@@ -13,6 +13,7 @@ import { toast } from "sonner";
 export const Billing = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState<any>(null);
     const [promoCode, setPromoCode] = useState("");
@@ -75,7 +76,11 @@ export const Billing = () => {
                 .select("*")
                 .eq("code", promoCode.toUpperCase())
                 .single();
-            if (promoErr) throw promoErr;
+            if (promoErr) {
+                console.error("Promo fetch error", promoErr);
+                toast.error("Promo code not found or invalid");
+                return;
+            }
 
             // Helper to convert price string to cents
             const priceCents = (price: string) => {
@@ -98,7 +103,11 @@ export const Billing = () => {
                         paddle_discount_id: promo.paddle_discount_id,
                     },
                 });
-                if (fnErr) throw fnErr;
+                if (fnErr) {
+                    console.error("Edge function error", fnErr);
+                    toast.error("Failed to activate free subscription");
+                    return;
+                }
                 toast.success("Free subscription activated!");
                 await fetchSubscription();
                 return;
@@ -115,8 +124,8 @@ export const Billing = () => {
                 });
             }
         } catch (e) {
-            console.error(e);
-            toast.error("Failed to apply promo");
+            console.error("Apply promo error", e);
+            toast.error(`Failed to apply promo: ${e instanceof Error ? e.message : String(e)}`);
         } finally {
             setApplyingPromo(false);
         }
