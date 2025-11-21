@@ -74,10 +74,14 @@ export default function BusinessPageForm() {
       return;
     }
     setLoading(true);
-    const ok = await updateBusinessSettings(settings);
+    const res = await updateBusinessSettings(settings);
     setLoading(false);
-    if (ok) toast.success('Business settings saved!');
-    else toast.error('Failed to save settings');
+    if (res && (res as any).ok) {
+      toast.success('Business settings saved!');
+    } else {
+      const message = res && (res as any).error ? (res as any).error : 'Failed to save settings';
+      toast.error(message);
+    }
   }
 
   return (

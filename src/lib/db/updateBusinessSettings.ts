@@ -5,9 +5,33 @@ import { BusinessPageSettings } from '@/types/BusinessPageSettings';
  * Update business settings for the current website in Supabase
  */
 export async function updateBusinessSettings(settings: BusinessPageSettings) {
-  // TODO: get current website ID from context/session
-  const websiteId = window?.tasklyWebsiteId;
-  if (!websiteId) return false;
+  // Determine websiteId: prefer window.tasklyWebsiteId; otherwise, pick first website owned by current user
+  let websiteId = (window as any)?.tasklyWebsiteId;
+  if (!websiteId) {
+    try {
+      const userRes = await supabase.auth.getUser();
+      const user = userRes?.data?.user;
+      if (user?.id) {
+        const { data: sites, error: siteErr } = await supabase
+          .from('websites')
+          .select('id')
+          .eq('user_id', user.id)
+          .limit(1);
+        if (siteErr) {
+          console.error('Failed to lookup website for user', siteErr);
+        }
+        if (sites && sites.length > 0) websiteId = sites[0].id as string;
+      }
+    } catch (e) {
+      console.error('Error getting user for website lookup', e);
+    }
+  }
+
+  if (!websiteId) {
+    console.error('No websiteId available to update business settings');
+    return { ok: false, error: 'No website selected' } as any;
+  }
+
   const { error } = await supabase
     .from('websites')
     .update({
@@ -18,5 +42,10 @@ export async function updateBusinessSettings(settings: BusinessPageSettings) {
       whatsapp_full_number: settings.whatsapp_full_number,
     })
     .eq('id', websiteId);
-  return !error;
+
+  if (error) {
+    console.error('Failed to update business settings', error);
+    return { ok: false, error: error.message || String(error) } as any;
+  }
+  return { ok: true } as any;
 }
