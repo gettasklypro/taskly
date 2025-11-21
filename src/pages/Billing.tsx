@@ -70,11 +70,15 @@ export const Billing = () => {
         }
         setApplyingPromo(true);
         try {
+            // Normalize the code: trim whitespace and uppercase for consistent storage
+            const normalizedCode = promoCode.trim().toUpperCase();
+
             // Get promo details from DB. Use maybeSingle() so zero rows returns null instead of an error.
+            // Use a trimmed, case-insensitive comparison to avoid whitespace/casing issues.
             const { data: promo, error: promoErr } = await supabase
                 .from("promo_codes")
                 .select("*")
-                .eq("code", promoCode.toUpperCase())
+                .ilike("code", normalizedCode)
                 .maybeSingle();
             if (promoErr) {
                 console.error("Promo fetch error", promoErr);
@@ -87,25 +91,51 @@ export const Billing = () => {
                 return;
             }
 
+            // Validate promo status, expiry and usage limits
+            if (promo.status && promo.status !== "active") {
+                toast.error("Promo code is not active");
+                return;
+            }
+            if (promo.expires_at) {
+                const expires = new Date(promo.expires_at);
+                const now = new Date();
+                if (expires < now) {
+                    toast.error("Promo code has expired");
+                    return;
+                }
+            }
+            if (promo.max_uses && typeof promo.current_uses === "number") {
+                if (promo.current_uses >= promo.max_uses) {
+                    toast.error("Promo code has reached its usage limit");
+                    return;
+                }
+            }
+
             // Helper to convert price string to cents
             const priceCents = (price: string) => {
                 const num = parseFloat(price.replace(/[^0-9.]/g, ""));
                 return Math.round(num * 100);
             };
             const plan = plans.find((p) => p.id === selectedPlan);
-            const isFree = (() => {
-                if (!plan) return false;
-                if (promo.discount_type === "percent" && promo.discount_value === 100) return true;
-                if (promo.discount_type === "fixed" && priceCents(plan.price) <= promo.discount_value * 100) return true;
-                return false;
-            })();
+
+            // --- If discount is 100%, skip Paddle checkout and activate subscription directly ---
+            let isFree = false;
+            if (plan) {
+                if (promo.discount_type === "percent" && promo.discount_value === 100) {
+                    isFree = true;
+                } else if (promo.discount_type === "fixed" && priceCents(plan.price) <= promo.discount_value * 100) {
+                    isFree = true;
+                }
+            }
 
             if (isFree) {
+                // Directly activate subscription for free plan
                 const { error: fnErr } = await supabase.functions.invoke("activate-free-subscription", {
                     body: {
                         user_id: user?.id,
                         plan_id: selectedPlan,
                         paddle_discount_id: promo.paddle_discount_id,
+                        promo_code: normalizedCode,
                     },
                 });
                 if (fnErr) {
@@ -113,12 +143,12 @@ export const Billing = () => {
                     toast.error("Failed to activate free subscription");
                     return;
                 }
-                toast.success("Free subscription activated!");
+                toast.success("Free subscription activated! No payment required.");
                 await fetchSubscription();
                 return;
             }
 
-            // Open Paddle checkout with discount code
+            // Otherwise, open Paddle checkout with discount code
             toast.success("Opening checkout with promo code...");
             if (window.Paddle) {
                 window.Paddle.Checkout.open({
