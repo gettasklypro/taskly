@@ -59,28 +59,65 @@ export const Billing = () => {
 
         setApplyingPromo(true);
         try {
-            // Here you would validate the promo code with Paddle
-            // For now, we'll just show a success message
-            toast.success("Promo code applied! Redirecting to checkout...");
+            // Validate promo code with Paddle
+            const { data: validationData, error: validationError } = await supabase.functions.invoke('validate-promo-code', {
+                body: {
+                    discount_code: promoCode,
+                    price_id: selectedPlan
+                }
+            });
 
-            // Open Paddle checkout with the promo code
-            if (window.Paddle) {
-                window.Paddle.Checkout.open({
-                    items: [
-                        {
-                            priceId: selectedPlan,
-                            quantity: 1
-                        }
-                    ],
-                    customer: {
-                        email: user?.email
-                    },
-                    customData: {
+            if (validationError || !validationData?.valid) {
+                toast.error(validationData?.error || "Invalid promo code");
+                setApplyingPromo(false);
+                return;
+            }
+
+            // If it's a 100% discount, create subscription directly without checkout
+            if (validationData.is100Percent) {
+                toast.success("100% discount applied! Activating your subscription...");
+
+                // Create subscription record directly
+                const { error: subError } = await supabase
+                    .from('subscriptions')
+                    .upsert({
                         user_id: user?.id,
-                        promo_code: promoCode
-                    },
-                    discountCode: promoCode
-                });
+                        plan_id: selectedPlan,
+                        status: 'active',
+                        paddle_subscription_id: `promo_${Date.now()}`,
+                        current_period_start: new Date().toISOString(),
+                        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+                    });
+
+                if (subError) {
+                    console.error('Error creating subscription:', subError);
+                    toast.error("Failed to activate subscription");
+                } else {
+                    toast.success("Subscription activated successfully!");
+                    navigate('/dashboard');
+                }
+            } else {
+                // Open Paddle checkout with the discount code
+                toast.success("Promo code validated! Opening checkout...");
+
+                if (window.Paddle) {
+                    window.Paddle.Checkout.open({
+                        items: [
+                            {
+                                priceId: selectedPlan,
+                                quantity: 1
+                            }
+                        ],
+                        customer: {
+                            email: user?.email
+                        },
+                        customData: {
+                            user_id: user?.id,
+                            promo_code: promoCode
+                        },
+                        discountId: validationData.discountId
+                    });
+                }
             }
         } catch (error) {
             console.error('Error applying promo:', error);
@@ -219,8 +256,8 @@ export const Billing = () => {
                                     <Card
                                         key={plan.id}
                                         className={`cursor-pointer transition-all ${selectedPlan === plan.id
-                                                ? 'border-primary ring-2 ring-primary'
-                                                : 'hover:border-primary/50'
+                                            ? 'border-primary ring-2 ring-primary'
+                                            : 'hover:border-primary/50'
                                             }`}
                                         onClick={() => setSelectedPlan(plan.id)}
                                     >
