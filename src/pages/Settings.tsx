@@ -5,41 +5,22 @@ import { User, Building, CreditCard, Bell, Shield } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import PlanSwitcher from "@/components/PlanSwitcher";
 
 export const Settings = () => {
   const { isAdmin } = useAdmin();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch user profile with plan
-  const { data: profile, refetch } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('plan_type')
-        .eq('id', user!.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
   return (
     <div className="min-h-screen">
-      <PageHeader 
-        title="Settings" 
+      <PageHeader
+        title="Settings"
         description="Manage your account and preferences"
       />
-      
+
       <div className="p-6 animate-fade-in space-y-6">
         {isAdmin && (
-          <Button 
+          <Button
             onClick={() => navigate("/admin")}
             className="gradient-primary"
             size="lg"
@@ -49,15 +30,7 @@ export const Settings = () => {
           </Button>
         )}
 
-        {/* Plan Switcher */}
-        {user && profile && (
-          <PlanSwitcher 
-            userId={user.id}
-            currentPlan={profile.plan_type || 'basic'}
-            onPlanChange={() => refetch()}
-          />
-        )}
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
             { icon: User, title: "Profile", desc: "Update your personal information", path: "/settings/profile" },
@@ -65,8 +38,8 @@ export const Settings = () => {
             { icon: CreditCard, title: "Billing", desc: "Subscription and payment methods", path: null },
             { icon: Bell, title: "Notifications", desc: "Configure email and push notifications", path: null },
           ].map((setting, index) => (
-            <Card 
-              key={setting.title} 
+            <Card
+              key={setting.title}
               className="gradient-card hover-lift border-border/50 cursor-pointer"
               style={{ animationDelay: `${index * 0.1}s` }}
               onClick={() => setting.path && navigate(setting.path)}
