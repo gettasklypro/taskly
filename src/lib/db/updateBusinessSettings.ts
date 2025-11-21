@@ -39,7 +39,19 @@ export async function updateBusinessSettings(settings: BusinessPageSettings, web
           business_description: settings.business_description,
           whatsapp_country_code: settings.whatsapp_country_code,
           whatsapp_number: settings.whatsapp_number,
-          whatsapp_full_number: settings.whatsapp_full_number,
+          whatsapp_full_number: (function sanitize(cc?: string, num?: string, full?: string) {
+            const s = (v?: string) => (v === null || v === undefined ? '' : String(v));
+            if (full) {
+              let f = s(full).replace(/^null/, '');
+              const p = f.startsWith('+') ? '+' : '';
+              f = p + f.replace(/[^0-9]/g, '');
+              return f === '+' ? '' : f;
+            }
+            const built = `${s(cc)}${s(num)}`.replace(/^null/, '');
+            const p2 = built.startsWith('+') ? '+' : '';
+            const cleaned = p2 + built.replace(/[^0-9]/g, '');
+            return cleaned === '+' ? '' : cleaned;
+          })(settings.whatsapp_country_code, settings.whatsapp_number, settings.whatsapp_full_number),
         })
         .eq('id', user.id);
       if (profErr) {
@@ -60,7 +72,19 @@ export async function updateBusinessSettings(settings: BusinessPageSettings, web
       business_description: settings.business_description,
       whatsapp_country_code: settings.whatsapp_country_code,
       whatsapp_number: settings.whatsapp_number,
-      whatsapp_full_number: settings.whatsapp_full_number,
+      whatsapp_full_number: (function sanitize(cc?: string, num?: string, full?: string) {
+        const s = (v?: string) => (v === null || v === undefined ? '' : String(v));
+        if (full) {
+          let f = s(full).replace(/^null/, '');
+          const p = f.startsWith('+') ? '+' : '';
+          f = p + f.replace(/[^0-9]/g, '');
+          return f === '+' ? '' : f;
+        }
+        const built = `${s(cc)}${s(num)}`.replace(/^null/, '');
+        const p2 = built.startsWith('+') ? '+' : '';
+        const cleaned = p2 + built.replace(/[^0-9]/g, '');
+        return cleaned === '+' ? '' : cleaned;
+      })(settings.whatsapp_country_code, settings.whatsapp_number, settings.whatsapp_full_number),
     })
     .eq('id', id);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import CountryCodeSelector from '@/components/ui/CountryCodeSelector';
 import { updateBusinessSettings } from '@/lib/db/updateBusinessSettings';
 import { getBusinessSettings } from '@/lib/db/getBusinessSettings';
@@ -32,26 +32,57 @@ export default function BusinessPageForm() {
     whatsapp_number: '',
     whatsapp_full_number: '',
   });
+  const [websites, setWebsites] = useState<Array<{id:string,name?:string}>>([]);
+  const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Load existing settings from Supabase
+    // Load available websites for current user and then load settings for the selected site
     async function load() {
       setLoading(true);
-      const data = await getBusinessSettings();
-      if (data) setSettings(data);
+      try {
+        const userRes = await (await import('@/integrations/supabase/client')).supabase.auth.getUser();
+        const user = userRes?.data?.user;
+        if (user?.id) {
+          const { data: sites } = await (await import('@/integrations/supabase/client')).supabase
+            .from('websites')
+            .select('id,name')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false });
+          if (sites) {
+            setWebsites(sites as any);
+            const pick = sites[0];
+            setSelectedWebsiteId((window as any)?.tasklyWebsiteId || pick?.id);
+            const data = await getBusinessSettings((window as any)?.tasklyWebsiteId || pick?.id);
+            if (data) setSettings(data);
+          }
+        }
+      } catch (e) {
+        console.error('Error loading websites or settings', e);
+      }
       setLoading(false);
     }
     load();
   }, []);
 
   // Auto-generate full WhatsApp number
+  function buildFullNumber(cc?: string, num?: string) {
+    const asStr = (v?: string) => (v === null || v === undefined ? '' : String(v));
+    let c = asStr(cc || settings.whatsapp_country_code).replace(/^null/, '');
+    let n = asStr(num || settings.whatsapp_number).replace(/^null/, '');
+    const built = `${c}${n}`;
+    const plus = built.startsWith('+') ? '+' : '';
+    const cleaned = plus + built.replace(/[^0-9]/g, '');
+    return cleaned === '+' ? '' : cleaned;
+  }
+
   useEffect(() => {
     setSettings((prev) => ({
       ...prev,
-      whatsapp_full_number: prev.whatsapp_country_code + prev.whatsapp_number,
+      whatsapp_full_number: buildFullNumber(prev.whatsapp_country_code, prev.whatsapp_number),
     }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.whatsapp_country_code, settings.whatsapp_number]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
@@ -61,6 +92,14 @@ export default function BusinessPageForm() {
 
   function handleCountryCode(code: string) {
     setSettings((prev) => ({ ...prev, whatsapp_country_code: code }));
+  }
+
+  async function handleWebsiteChange(id: string) {
+    setSelectedWebsiteId(id);
+    setLoading(true);
+    const data = await getBusinessSettings(id);
+    if (data) setSettings(data);
+    setLoading(false);
   }
 
   async function handleSave() {
@@ -74,7 +113,7 @@ export default function BusinessPageForm() {
       return;
     }
     setLoading(true);
-    const res = await updateBusinessSettings(settings);
+    const res = await updateBusinessSettings(settings, selectedWebsiteId);
     setLoading(false);
     if (res && (res as any).ok) {
       toast.success('Business settings saved!');
@@ -86,6 +125,15 @@ export default function BusinessPageForm() {
 
   return (
     <form className="space-y-6">
+      {/* Website selector - choose which site to edit */}
+      {websites && websites.length > 0 && (
+        <div>
+          <label className="block font-medium mb-1">Select Website</label>
+          <select className="border rounded px-2 py-1 w-full mb-2" value={selectedWebsiteId} onChange={e => handleWebsiteChange(e.target.value)}>
+            {websites.map(w => <option key={w.id} value={w.id}>{w.name || w.id}</option>)}
+          </select>
+        </div>
+      )}
       <div>
         <label className="block font-medium mb-1">Business Name</label>
         <Input name="business_name" value={settings.business_name} onChange={handleChange} required />

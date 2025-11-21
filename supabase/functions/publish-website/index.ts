@@ -51,12 +51,23 @@ serve(async (req) => {
       });
     }
 
-    // Merge profile fields if website missing business fields
+    // Merge profile fields if any website business/whatsapp field is missing
     const mergedFields: Record<string, any> = {};
+    let ownerId: string | null = null;
     if (existingSite) {
-      if (!existingSite.whatsapp_full_number || !existingSite.business_name) {
+      ownerId = existingSite.user_id ?? null;
+      const needs = {
+        business_name: !existingSite.business_name,
+        business_description: !existingSite.business_description,
+        whatsapp_country_code: !existingSite.whatsapp_country_code,
+        whatsapp_number: !existingSite.whatsapp_number,
+        whatsapp_full_number: !existingSite.whatsapp_full_number,
+      };
+
+      if (Object.values(needs).some(Boolean)) {
         const ownerId = existingSite.user_id;
         if (ownerId) {
+          console.log('Publish: ownerId present, fetching profile', { ownerId, needs });
           const { data: profileData, error: profErr } = await supabase
             .from('profiles')
             .select('business_name, business_description, whatsapp_country_code, whatsapp_number, whatsapp_full_number')
@@ -65,14 +76,39 @@ serve(async (req) => {
           if (profErr) {
             console.error('Failed to fetch profile during publish merge', profErr);
           } else if (profileData) {
-            if (!existingSite.business_name && profileData.business_name) mergedFields.business_name = profileData.business_name;
-            if (!existingSite.business_description && profileData.business_description) mergedFields.business_description = profileData.business_description;
-            if (!existingSite.whatsapp_country_code && profileData.whatsapp_country_code) mergedFields.whatsapp_country_code = profileData.whatsapp_country_code;
-            if (!existingSite.whatsapp_number && profileData.whatsapp_number) mergedFields.whatsapp_number = profileData.whatsapp_number;
-            if (!existingSite.whatsapp_full_number && profileData.whatsapp_full_number) mergedFields.whatsapp_full_number = profileData.whatsapp_full_number;
+            console.log('Publish: fetched profileData', { profileData });
+            if (needs.business_name && profileData.business_name) mergedFields.business_name = profileData.business_name;
+            if (needs.business_description && profileData.business_description) mergedFields.business_description = profileData.business_description;
+            if (needs.whatsapp_country_code && profileData.whatsapp_country_code) mergedFields.whatsapp_country_code = profileData.whatsapp_country_code;
+            if (needs.whatsapp_number && profileData.whatsapp_number) mergedFields.whatsapp_number = profileData.whatsapp_number;
+            if (needs.whatsapp_full_number && profileData.whatsapp_full_number) mergedFields.whatsapp_full_number = profileData.whatsapp_full_number;
+            console.log('Publish: mergedFields after profile merge', { mergedFields });
           }
         }
       }
+    }
+
+    // Helper to normalize/construct full WhatsApp number
+    function normalizeFullNumber(countryCode: any, number: any, existingFull: any) {
+      // prefer explicit existing full if valid
+      const asStr = (val: any) => (val === null || val === undefined ? '' : String(val));
+      let full = asStr(existingFull);
+      if (full) {
+        full = full.replace(/^null/, '');
+        const plus = full.startsWith('+') ? '+' : '';
+        full = plus + full.replace(/[^0-9]/g, '');
+        if (full === '+') full = '';
+        if (full) return full;
+      }
+
+      const cc = asStr(countryCode).replace(/^null/, '');
+      const num = asStr(number).replace(/^null/, '');
+      let built = `${cc}${num}`;
+      built = built.replace(/^null/, '');
+      const plus2 = built.startsWith('+') ? '+' : '';
+      built = plus2 + built.replace(/[^0-9]/g, '');
+      if (built === '+') built = '';
+      return built;
     }
 
     // Build update object
@@ -82,8 +118,17 @@ serve(async (req) => {
     if (siteTitle) updateData.site_title = siteTitle;
     if (faviconUrl) updateData.favicon_url = faviconUrl;
 
-    const finalUpdate = Object.keys(mergedFields).length ? { ...updateData, ...mergedFields } : updateData;
+    // compute whatsapp_full_number safely from available pieces
+    const finalUpdateBase = Object.keys(mergedFields).length ? { ...updateData, ...mergedFields } : updateData;
+    const computedFull = normalizeFullNumber(
+      mergedFields.whatsapp_country_code ?? existingSite.whatsapp_country_code,
+      mergedFields.whatsapp_number ?? existingSite.whatsapp_number,
+      mergedFields.whatsapp_full_number ?? existingSite.whatsapp_full_number,
+    );
 
+    const finalUpdate = { ...finalUpdateBase, whatsapp_full_number: computedFull || (finalUpdateBase.whatsapp_full_number ?? undefined) };
+
+    console.log('Publish: finalUpdate about to write', { websiteId, finalUpdate, ownerId });
     const { error: updateErr } = await supabase.from('websites').update(finalUpdate).eq('id', websiteId);
     if (updateErr) {
       console.error('Failed to update website during publish', updateErr);
