@@ -57,13 +57,16 @@ serve(async (req) => {
     // Call generate-website-template using the Supabase client functions.invoke
     // This ensures the internal call is authenticated and the payload is delivered reliably.
     console.log('Calling generate-website-template via supabaseClient.functions.invoke with payload:', generatePayload);
-    const { data: genData, error: genError } = await supabaseClient.functions.invoke('generate-website-template', {
-      // include userId in headers too so the target function can read it reliably
-      body: generatePayload,
-      headers: {
-        'x-user-id': userId
+    const { data: genData, error: genError } = await supabaseClient.functions.invoke(
+      'generate-website-template',
+      {
+        body: generatePayload,
+        headers: {
+          'x-user-id': userId,
+          'Authorization': `Bearer ${supabaseServiceKey}`  // <-- REQUIRED
+        }
       }
-    });
+    );
 
     if (genError) {
       console.error('Generation failed (supabase functions.invoke):', genError);

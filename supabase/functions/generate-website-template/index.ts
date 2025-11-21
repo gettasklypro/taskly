@@ -35,16 +35,9 @@ serve(async (req) => {
       });
     }
 
-    const supabaseClient = createClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
-
+    // Only set Authorization header if present and valid
+    const authHeader = req.headers.get('Authorization') || '';
+    const headerUserId = req.headers.get('x-user-id');
     // Read and log raw body to diagnose missing fields or parsing issues
     const rawBodyText = await req.text();
     console.log('Raw request body text:', rawBodyText);
@@ -55,48 +48,96 @@ serve(async (req) => {
     } catch (err) {
       console.warn('Failed to parse request body as JSON:', err);
     }
+    let supabaseClient;
+    // If batch/internal mode (userId or x-user-id provided), use service-role key
+    if (parsedBody.userId || headerUserId) {
+      if (!supabaseServiceRoleKey) {
+        console.error('Missing SUPABASE_SERVICE_ROLE_KEY for batch mode');
+        return new Response(JSON.stringify({ error: 'Server configuration error: missing service role key' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      supabaseClient = createClient(
+        supabaseUrl,
+        supabaseServiceRoleKey,
+        {
+          global: {
+            headers: headerUserId ? { 'x-user-id': headerUserId } : {},
+          },
+        }
+      );
+      console.log('Supabase client initialized with service-role key for batch/internal mode');
+    } else {
+      // Normal user mode: use anon key and Authorization header if present
+      supabaseClient = createClient(
+        supabaseUrl,
+        supabaseAnonKey,
+        {
+          global: {
+            headers: authHeader ? { Authorization: authHeader } : {},
+          },
+        }
+      );
+      console.log('Supabase client initialized with anon key for user mode');
+    }
 
-    const { prompt, category, businessName, userId } = parsedBody;
+    // ...existing code...
+
+    let { prompt, category, businessName, userId } = parsedBody;
+
+    // Defensive extraction: sometimes the body may be wrapped or userId may not parse correctly.
+    // Try common fallback locations and a regex search on the raw text.
+    if (!userId) {
+      if (parsedBody?.data && parsedBody.data.userId) {
+        userId = parsedBody.data.userId;
+        console.log('Found userId in parsedBody.data.userId:', userId);
+      }
+    }
+    if (!userId) {
+      const m = rawBodyText && rawBodyText.match(/"userId"\s*:\s*"([0-9a-fA-F-]{10,})"/);
+      if (m && m[1]) {
+        userId = m[1];
+        console.log('Extracted userId from raw body via regex:', userId);
+      }
+    }
 
     // Determine the user ID - either from the request (batch mode) or from auth (normal mode)
     let effectiveUserId: string;
-
-    const authHeader = req.headers.get('Authorization') || '';
-    const headerUserId = req.headers.get('x-user-id');
-
     if (userId || headerUserId) {
-      // Batch mode: userId provided in request body (called with service role)
-      const resolvedUserId = userId || headerUserId;
-      console.log('Using provided userId from batch/header:', resolvedUserId);
-      effectiveUserId = resolvedUserId;
-    } else if (supabaseServiceRoleKey && authHeader === `Bearer ${supabaseServiceRoleKey}`) {
-      // Request is authenticated with the service role key but no userId provided
-      // Avoid calling auth.getUser() with a service role token (not a user JWT).
-      console.error('Service role request missing userId');
-      return new Response(JSON.stringify({ error: 'Missing userId for service role request' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      // Batch mode: userId provided in request body or header
+      effectiveUserId = userId || headerUserId;
+      console.log('Using provided userId from batch/header:', effectiveUserId);
     } else {
-      // Normal mode: authenticate the user using the provided Authorization header (session JWT)
-      const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-      console.log('getUser() result:', { user, authError });
-      if (authError) {
-        console.error('Auth error:', authError);
-        return new Response(JSON.stringify({ error: 'Authentication failed', details: authError }), {
-          status: 401,
+      // If service-role or no JWT, do NOT attempt to parse JWT or call auth.getUser
+      if (authHeader && authHeader.startsWith('Bearer ') && authHeader.split('.').length === 3) {
+        // Looks like a real JWT, try to get user
+        const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+        console.log('getUser() result:', { user, authError });
+        if (authError) {
+          console.error('Auth error:', authError);
+          return new Response(JSON.stringify({ error: 'Authentication failed', details: authError }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        if (!user) {
+          console.error('No user found in session');
+          return new Response(JSON.stringify({ error: 'No authenticated user found' }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        console.log('User authenticated:', user.id);
+        effectiveUserId = user.id;
+      } else {
+        // No userId and no valid JWT
+        console.error('Missing userId and no valid JWT');
+        return new Response(JSON.stringify({ error: 'Missing userId or valid JWT for authentication' }), {
+          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      if (!user) {
-        console.error('No user found in session');
-        return new Response(JSON.stringify({ error: 'No authenticated user found' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      console.log('User authenticated:', user.id);
-      effectiveUserId = user.id;
     }
     if (!prompt || !category) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
