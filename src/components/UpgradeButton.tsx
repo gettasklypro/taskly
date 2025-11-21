@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 
 // UpgradeButton: triggers checkout creation and redirects to Paddle checkout URL
 export default function UpgradeButton({ planId }: { planId: string }) {
@@ -36,8 +37,8 @@ export default function UpgradeButton({ planId }: { planId: string }) {
   };
 
   return (
-    <button onClick={handleUpgrade} className="btn btn-primary">
+    <Button onClick={handleUpgrade} className="w-full" size="lg">
       Upgrade
-    </button>
+    </Button>
   );
 }

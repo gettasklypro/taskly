@@ -26,11 +26,13 @@ serve(async (req) => {
                     quantity: 1
                 }
             ],
+            collection_mode: "automatic",
             custom_data: {
                 user_id: user_id
             }
         };
 
+        // Add customer email if provided
         if (email) {
             payload.customer = {
                 email: email
@@ -43,7 +45,7 @@ serve(async (req) => {
             delete payload.customer; // Cannot use both
         }
 
-        const response = await fetch("https://api.paddle.com/v2/checkout/sessions", {
+        const response = await fetch("https://api.paddle.com/transactions", {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${PADDLE_API_KEY}`,
@@ -55,14 +57,25 @@ serve(async (req) => {
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('Paddle API Error:', data);
+            console.error('Paddle API Error:', JSON.stringify(data));
             return new Response(JSON.stringify({ error: data.error || 'Failed to create checkout' }), {
                 status: response.status,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
 
-        return new Response(JSON.stringify({ url: data.data.url }), {
+        // Extract checkout URL from the response
+        const checkoutUrl = data.data?.checkout?.url;
+
+        if (!checkoutUrl) {
+            console.error('No checkout URL in response:', JSON.stringify(data));
+            return new Response(JSON.stringify({ error: 'No checkout URL returned from Paddle' }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
+
+        return new Response(JSON.stringify({ url: checkoutUrl }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
