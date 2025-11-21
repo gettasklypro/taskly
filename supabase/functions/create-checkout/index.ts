@@ -60,19 +60,36 @@ serve(async (req) => {
             });
         }
 
-        console.log('Paddle API Response:', JSON.stringify(data, null, 2));
+        console.log('Full Paddle API Response:', JSON.stringify(data, null, 2));
+        console.log('Transaction status:', data.data?.status);
+        console.log('Transaction ID:', data.data?.id);
+        console.log('Checkout object:', JSON.stringify(data.data?.checkout, null, 2));
 
         // Extract checkout URL from the response
         const checkoutUrl = data.data?.checkout?.url;
 
         if (!checkoutUrl) {
-            console.error('No checkout URL in response:', JSON.stringify(data));
-            return new Response(JSON.stringify({ error: 'No checkout URL returned from Paddle' }), {
+            console.error('No checkout URL in response. Full data:', JSON.stringify(data, null, 2));
+
+            // If transaction is already completed, it means it was $0 or auto-completed
+            if (data.data?.status === 'completed') {
+                console.log('Transaction already completed without payment form');
+                return new Response(JSON.stringify({
+                    url: `https://www.gettaskly.ai/checkout/success?_ptxn=${data.data.id}`,
+                    message: 'Transaction completed without payment (possible $0 transaction or auto-complete)'
+                }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    status: 200,
+                });
+            }
+
+            return new Response(JSON.stringify({ error: 'No checkout URL returned from Paddle', data: data }), {
                 status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
 
+        console.log('Returning checkout URL:', checkoutUrl);
         return new Response(JSON.stringify({ url: checkoutUrl }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
