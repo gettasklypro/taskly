@@ -24,10 +24,12 @@ serve(async (req) => {
             description: `Promo code: ${code}`,
             type: discount_type === 'percent' ? 'percentage' : 'flat',
             amount: discount_value.toString(),
-            currency_code: discount_type === 'fixed' ? 'USD' : undefined,
-            enabled: true,
-            restrict_to: [],
         };
+
+        // Add currency for flat discounts
+        if (discount_type === 'fixed') {
+            paddlePayload.currency_code = 'USD';
+        }
 
         // Add expiration if provided
         if (expires_at) {
@@ -36,7 +38,7 @@ serve(async (req) => {
 
         // Add usage limit if provided
         if (max_uses) {
-            paddlePayload.maximum_recurring_intervals = max_uses;
+            paddlePayload.usage_limit = max_uses;
         }
 
         console.log('Creating Paddle discount:', JSON.stringify(paddlePayload, null, 2));
