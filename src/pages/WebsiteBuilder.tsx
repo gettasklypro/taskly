@@ -346,9 +346,18 @@ export const WebsiteBuilder = () => {
 
       // Include merged fields in the same update to ensure atomic write
       const finalUpdate = Object.keys(mergedFields).length ? { ...updateData, ...mergedFields } : updateData;
-      const { error } = await supabase.from("websites").update(finalUpdate).eq("id", websiteId);
 
-      if (error) throw error;
+      // Call Edge Function to perform publish update with service role credentials
+      const { data: fnResp, error: fnInvokeErr } = await supabase.functions.invoke('publish-website', {
+        body: { websiteId, slug, domain, siteTitle, faviconUrl },
+      });
+
+      if (fnInvokeErr) {
+        throw new Error(fnInvokeErr.message || 'Failed to invoke publish function');
+      }
+      if (!fnResp || !fnResp.success) {
+        throw new Error(fnResp?.error || 'Publish function returned failure');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["websites", user?.id] });
