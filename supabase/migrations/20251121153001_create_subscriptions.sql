@@ -10,4 +10,4 @@ create table if not exists public.subscriptions (
   created_at timestamp default now()
 );
 
-create index subscriptions_user_id_idx on public.subscriptions(user_id);
+create index if not exists subscriptions_user_id_idx on public.subscriptions(user_id);

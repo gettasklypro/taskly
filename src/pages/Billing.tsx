@@ -69,6 +69,42 @@ export const Billing = () => {
         }
         setApplyingPromo(true);
         try {
+            // Get promo details from DB
+            const { data: promo, error: promoErr } = await supabase
+                .from("promo_codes")
+                .select("*")
+                .eq("code", promoCode.toUpperCase())
+                .single();
+            if (promoErr) throw promoErr;
+
+            // Helper to convert price string to cents
+            const priceCents = (price: string) => {
+                const num = parseFloat(price.replace(/[^0-9.]/g, ""));
+                return Math.round(num * 100);
+            };
+            const plan = plans.find((p) => p.id === selectedPlan);
+            const isFree = (() => {
+                if (!plan) return false;
+                if (promo.discount_type === "percent" && promo.discount_value === 100) return true;
+                if (promo.discount_type === "fixed" && priceCents(plan.price) <= promo.discount_value * 100) return true;
+                return false;
+            })();
+
+            if (isFree) {
+                const { error: fnErr } = await supabase.functions.invoke("activate-free-subscription", {
+                    body: {
+                        user_id: user?.id,
+                        plan_id: selectedPlan,
+                        paddle_discount_id: promo.paddle_discount_id,
+                    },
+                });
+                if (fnErr) throw fnErr;
+                toast.success("Free subscription activated!");
+                await fetchSubscription();
+                return;
+            }
+
+            // Open Paddle checkout with discount code
             toast.success("Opening checkout with promo code...");
             if (window.Paddle) {
                 window.Paddle.Checkout.open({
@@ -80,7 +116,7 @@ export const Billing = () => {
             }
         } catch (e) {
             console.error(e);
-            toast.error("Failed to open checkout");
+            toast.error("Failed to apply promo");
         } finally {
             setApplyingPromo(false);
         }
@@ -94,7 +130,9 @@ export const Billing = () => {
         return (
             <div className="min-h-screen">
                 <PageHeader title="Billing" description="Manage your subscription and payment methods" />
-                <div className="p-6"><p className="text-muted-foreground">Loading…</p></div>
+                <div className="p-6">
+                    <p className="text-muted-foreground">Loading…</p>
+                </div>
             </div>
         );
     }
