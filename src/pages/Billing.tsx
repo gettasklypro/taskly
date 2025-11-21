@@ -73,13 +73,34 @@ export const Billing = () => {
             // Normalize the code: trim whitespace and uppercase for consistent storage
             const normalizedCode = promoCode.trim().toUpperCase();
 
-            // Get promo details from DB. Use maybeSingle() so zero rows returns null instead of an error.
-            // Use a trimmed, case-insensitive comparison to avoid whitespace/casing issues.
-            const { data: promo, error: promoErr } = await supabase
+            // Try local DB first
+            let promo, promoErr;
+            const localResult = await supabase
                 .from("promo_codes")
                 .select("*")
                 .ilike("code", normalizedCode)
                 .maybeSingle();
+            promo = localResult.data;
+            promoErr = localResult.error;
+
+            // If not found locally, check Paddle discounts via API
+            if (!promo) {
+                const res = await fetch(`/api/check-paddle-discount?code=${encodeURIComponent(normalizedCode)}`);
+                if (res.ok) {
+                    const { discount } = await res.json();
+                    if (discount && discount.code) {
+                        promo = {
+                            code: discount.code,
+                            discount_type: discount.type || "percent", // adjust as needed
+                            discount_value: discount.amount || discount.value || 0,
+                            status: discount.status || "active",
+                            expires_at: discount.expires_at || null,
+                            paddle_discount_id: discount.id || null,
+                        };
+                    }
+                }
+            }
+
             if (promoErr) {
                 console.error("Promo fetch error", promoErr);
                 toast.error("Promo code not found or invalid");
