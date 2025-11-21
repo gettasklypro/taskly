@@ -33,6 +33,7 @@ import { MySites } from "./pages/MySites";
 import { Settings } from "./pages/Settings";
 import ProfileSettings from "./pages/ProfileSettings";
 import { Support } from "./pages/Support";
+import { Pricing } from "./pages/Pricing";
 import Inbox from "./pages/Inbox";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
@@ -83,6 +84,7 @@ const App = () => (
           <Route path="/website-builder/edit/:websiteId" element={<ProtectedRoute><Layout><WebsiteEditor /></Layout></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
           <Route path="/settings/profile" element={<ProtectedRoute><Layout><ProfileSettings /></Layout></ProtectedRoute>} />
+          <Route path="/pricing" element={<ProtectedRoute><Layout><Pricing /></Layout></ProtectedRoute>} />
           <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
           <Route path="/support" element={<ProtectedRoute><Layout><Support /></Layout></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminLayout><Admin /></AdminLayout></AdminRoute></ProtectedRoute>} />

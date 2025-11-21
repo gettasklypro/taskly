@@ -1,5 +1,5 @@
 -- Create subscriptions table for Paddle integration
-create table public.subscriptions (
+create table if not exists public.subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   paddle_subscription_id text not null,

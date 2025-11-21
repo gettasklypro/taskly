@@ -68,25 +68,49 @@ async function verifyPaddlePSignature(params: Record<string, any>, pSignature: s
 // Verify JSON HMAC (new Paddle Billing) using PADDLE_WEBHOOK_SECRET
 async function verifyJsonHmac(rawBody: string, signatureHeader?: string) {
   if (!PADDLE_WEBHOOK_SECRET || !signatureHeader) return false;
+
   try {
+    // Parse ts and h1 from the header
+    // Header format: ts=1671234567;h1=abcdef123456...
+    const parts = signatureHeader.split(';');
+    let ts = '';
+    let h1 = '';
+
+    for (const part of parts) {
+      const [key, value] = part.split('=');
+      if (key === 'ts') ts = value;
+      if (key === 'h1') h1 = value;
+    }
+
+    if (!ts || !h1) {
+      console.warn('Missing ts or h1 in signature header');
+      return false;
+    }
+
+    // Prevent replay attacks (optional, but good practice - allowing 5 mins drift)
+    // const timestamp = parseInt(ts);
+    // if (isNaN(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300) return false;
+
+    const signedPayload = `${ts}:${rawBody}`;
+
     const key = new TextEncoder().encode(PADDLE_WEBHOOK_SECRET);
-    const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
-    const sigHeader = signatureHeader.trim();
-    // Try base64
-    try {
-      const sigBytesBase64 = Uint8Array.from(atob(sigHeader), c => c.charCodeAt(0));
-      const validBase64 = await crypto.subtle.verify('HMAC', cryptoKey, sigBytesBase64, new TextEncoder().encode(rawBody));
-      if (validBase64) return true;
-    } catch (_) {}
-    // Try hex
-    try {
-      const hex = sigHeader.replace(/^0x/, '');
-      const sigBytesHex = new Uint8Array(hex.length / 2);
-      for (let i = 0; i < hex.length; i += 2) sigBytesHex[i / 2] = parseInt(hex.substr(i, 2), 16);
-      const validHex = await crypto.subtle.verify('HMAC', cryptoKey, sigBytesHex, new TextEncoder().encode(rawBody));
-      if (validHex) return true;
-    } catch (_) {}
-    return false;
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      key,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify', 'sign']
+    );
+
+    const sigBytesHex = new Uint8Array(h1.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    const valid = await crypto.subtle.verify(
+      'HMAC',
+      cryptoKey,
+      sigBytesHex,
+      new TextEncoder().encode(signedPayload)
+    );
+
+    return valid;
   } catch (err) {
     console.error('HMAC verification error', err);
     return false;
