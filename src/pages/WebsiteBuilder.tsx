@@ -314,6 +314,33 @@ export const WebsiteBuilder = () => {
         }
       }
 
+      // Ensure website record has business/profile fields before publishing
+      try {
+        const { data: existingSite } = await supabase.from('websites').select('user_id, business_name, business_description, whatsapp_country_code, whatsapp_number, whatsapp_full_number').eq('id', websiteId).single();
+        if (existingSite) {
+          const needsMerge = !existingSite.whatsapp_full_number || !existingSite.business_name;
+          if (needsMerge) {
+            const ownerId = existingSite.user_id || user?.id;
+            if (ownerId) {
+              const { data: profileData } = await supabase.from('profiles').select('business_name, business_description, whatsapp_country_code, whatsapp_number, whatsapp_full_number').eq('id', ownerId).single();
+              if (profileData) {
+                const updateFields: any = {};
+                if (!existingSite.business_name && profileData.business_name) updateFields.business_name = profileData.business_name;
+                if (!existingSite.business_description && profileData.business_description) updateFields.business_description = profileData.business_description;
+                if (!existingSite.whatsapp_country_code && profileData.whatsapp_country_code) updateFields.whatsapp_country_code = profileData.whatsapp_country_code;
+                if (!existingSite.whatsapp_number && profileData.whatsapp_number) updateFields.whatsapp_number = profileData.whatsapp_number;
+                if (!existingSite.whatsapp_full_number && profileData.whatsapp_full_number) updateFields.whatsapp_full_number = profileData.whatsapp_full_number;
+                if (Object.keys(updateFields).length > 0) {
+                  await supabase.from('websites').update(updateFields).eq('id', websiteId);
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to merge profile business settings into website before publish', e);
+      }
+
       const updateData: any = { status: "published" };
       if (slug) updateData.slug = slug;
       if (domain) updateData.domain = domain;
