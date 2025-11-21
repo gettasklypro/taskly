@@ -35,7 +35,7 @@ export const Settings = () => {
           {[
             { icon: User, title: "Profile", desc: "Update your personal information", path: "/settings/profile" },
             { icon: Building, title: "Business", desc: "Manage business details and branding", path: null },
-            { icon: CreditCard, title: "Billing", desc: "Subscription and payment methods", path: null },
+            { icon: CreditCard, title: "Billing", desc: "Subscription and payment methods", path: "/settings/billing" },
             { icon: Bell, title: "Notifications", desc: "Configure email and push notifications", path: null },
           ].map((setting, index) => (
             <Card
