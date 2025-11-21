@@ -19,6 +19,10 @@ serve(async (req) => {
             throw new Error('Missing PADDLE_API_KEY');
         }
 
+        if (!email) {
+            throw new Error('Email is required for checkout');
+        }
+
         const payload: any = {
             items: [
                 {
@@ -27,23 +31,15 @@ serve(async (req) => {
                 }
             ],
             collection_mode: "automatic",
+            customer: {
+                email: email
+            },
             custom_data: {
                 user_id: user_id
             }
         };
 
-        // Add customer email if provided
-        if (email) {
-            payload.customer = {
-                email: email
-            };
-        }
-
-        // If user_id looks like a Paddle Customer ID (starts with ctm_), use it
-        if (user_id && typeof user_id === 'string' && user_id.startsWith('ctm_')) {
-            payload.customer_id = user_id;
-            delete payload.customer; // Cannot use both
-        }
+        console.log('Creating Paddle transaction with payload:', JSON.stringify(payload, null, 2));
 
         const response = await fetch("https://api.paddle.com/transactions", {
             method: "POST",
@@ -63,6 +59,8 @@ serve(async (req) => {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
+
+        console.log('Paddle API Response:', JSON.stringify(data, null, 2));
 
         // Extract checkout URL from the response
         const checkoutUrl = data.data?.checkout?.url;
