@@ -256,46 +256,7 @@ export const Billing = () => {
                     </CardContent>
                 </Card>
 
-                {/* Promo Code */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Tag className="h-5 w-5" /> Apply Promo Code
-                        </CardTitle>
-                        <CardDescription>Have a promo code? Apply it to your next purchase</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Promo Code</label>
-                            <Input placeholder="Enter promo code" value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Select Plan</label>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                {plans.map(plan => (
-                                    <Card
-                                        key={plan.id}
-                                        className={`cursor-pointer transition-all ${selectedPlan === plan.id ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"}`}
-                                        onClick={() => setSelectedPlan(plan.id)}
-                                    >
-                                        <CardContent className="p-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="font-medium">{plan.name}</p>
-                                                    <p className="text-sm text-muted-foreground">{plan.price}</p>
-                                                </div>
-                                                {selectedPlan === plan.id && <CheckCircle className="h-5 w-5 text-primary" />}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
-                        <Button onClick={handleApplyPromo} disabled={!promoCode || !selectedPlan || applyingPromo} className="w-full">
-                            {applyingPromo ? "Applying…" : "Apply Promo Code & Checkout"}
-                        </Button>
-                    </CardContent>
-                </Card>
+                {/* Promo Code section hidden as promo codes are now entered in Paddle checkout */}
 
                 {/* Billing History placeholder */}
                 <Card>
